@@ -8,7 +8,6 @@ services:
     container_name: api1
     environment:
       - "JAVA_OPTS=-Dserver.port=8081 -Xms54m -Xmx110m"
-    # Mapeia a porta 8081 do host para a 8080 do contêiner
     ports:
       - "8081:8080"
     networks:
@@ -16,8 +15,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.55"
-          memory: "150MB"
+          cpus: "1.55"
+          memory: "250MB"
 
   api2:
     build:
@@ -26,7 +25,6 @@ services:
     container_name: api2
     environment:
       - "JAVA_OPTS=-Dserver.port=8082 -Xms54m -Xmx110m"
-    # Mapeia a porta 8082 do host para a 8080 do contêiner
     ports:
       - "8082:8080"
     networks:
@@ -34,8 +32,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.55"
-          memory: "150MB"
+          cpus: "1.55"
+          memory: "250MB"
 
   nginx:
     image: nginx:latest
@@ -60,8 +58,6 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
     networks:
       - payment-processor
     deploy:
@@ -69,9 +65,6 @@ services:
         limits:
           cpus: "0.2"
           memory: "25MB"
-
-volumes:
-  redis_data:
 
 networks:
   payment-processor:

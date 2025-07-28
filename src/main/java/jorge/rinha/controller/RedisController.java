@@ -10,7 +10,7 @@ import jorge.rinha.service.RedisService;
 
 
 @RestController
-@RequestMapping("/redis")
+@RequestMapping("/payments-summary")
 public class RedisController {
 
     private final RedisService redisService;;
@@ -21,7 +21,7 @@ public class RedisController {
 		this.redisService = redisService;
 	}
 
-	    @GetMapping("/get")
+	    @GetMapping
 	    public ResponseEntity<PaymentSummaryResponse> get() {
 	    	var value = redisService.findSummary();
 	        

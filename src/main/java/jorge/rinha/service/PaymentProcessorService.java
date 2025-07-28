@@ -1,88 +1,135 @@
 package jorge.rinha.service;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import jorge.rinha.dto.request.FullPaymentProcessorRequest;
+import jorge.rinha.dto.request.PaymentCompleted;
+import jorge.rinha.dto.request.PaymentCompleted.PaymentType;
 import jorge.rinha.dto.request.PaymentProcessorRequest;
-import reactor.core.publisher.Mono;
 
 @Service
 public class PaymentProcessorService {
+
 	
+	BlockingQueue<FullPaymentProcessorRequest> queue = new ArrayBlockingQueue<>(2000);
 	
-	@Value("${url.payment.processor.default}")
-	private String urlProcessorDefault;
+	private final WebClient defaultClient;
+	private final WebClient fallbackClient;
 	
-	@Value("${url.payment.processor.fallback}")
-	private String urlProcessorFallback;
-	
-	private final WebClient webClient;
     private final RedisService redisService;
 
+    public PaymentProcessorService(
+            WebClient.Builder webClientBuilder,
+            RedisService redisService,
+            @Value("${url.payment.processor.default}") String urlDefault,
+            @Value("${url.payment.processor.fallback}") String urlFallback) {
+
+        this.defaultClient  = webClientBuilder.baseUrl(urlDefault).build();
+        this.fallbackClient = webClientBuilder.baseUrl(urlFallback).build();
+        this.redisService   = redisService;
+        
+        for (int i = 0; i < 20; i++) {
+			Thread.startVirtualThread(this::queueManager);
+		}
+    }
     
-	public PaymentProcessorService(WebClient webClient, RedisService redisService) {
-		this.webClient = webClient;
-		this.redisService = redisService;
-	}
-	
-	
-	public Boolean processor(PaymentProcessorRequest paymentRequest, String jsonPayment) {
+    public void queueManager() {
+    	while (true) {
+			var paymentReq = getOutOfQueue();
+			processor(paymentReq, paymentReq.json());
+		}
+    }
+    
+    public FullPaymentProcessorRequest getOutOfQueue() {
+    	try {
+    		return queue.take();
+		} catch (Exception e) {
+			 throw new RuntimeException(e);
+		}
+    	
+    }
+    
+    public void getInQueue(FullPaymentProcessorRequest request) {
+    	try {
+			boolean success =  queue.offer(request, 1, TimeUnit.SECONDS);
+			if (!success) {
+			    Thread.sleep(Duration.ofSeconds(2));
+			    queue.offer(request, 1, TimeUnit.SECONDS);
+			    if (!success) {
+			    	System.out.println("Fila cheia! Pagamento descartado ou redirecionado.");
+			    }
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+    }
+    
+	public Boolean processor(FullPaymentProcessorRequest req, String jsonPayment) {
 		
-		for(int i = 0;i<13;i++) {
-			if(callApiDefault(jsonPayment)) {
-				redisService.saveDefault(paymentRequest);
+		for(int i = 0;i<5;i++) {
+			if(apiDefault(jsonPayment)) {
+				redisService.getInQueue(new PaymentCompleted(req.request().amount(), PaymentType.DEFAULT));
 				return true;
 			}
 		}
 		
-		if(callApiFallBack(jsonPayment)) {
-			redisService.saveDefault(paymentRequest);
+		if(apiFallBack(jsonPayment)) {
+			redisService.getInQueue(new PaymentCompleted(req.request().amount(), PaymentType.FALLBACK));
 			return true;
 		}
 		
-		
+
 		return false;
 	}
 
-	public Boolean callApiFallBack(String json) {
-        return webClient.post()
-                .uri(urlProcessorFallback)
-                .bodyValue(json)
-                .exchangeToMono(response -> Mono.just(response.statusCode().is2xxSuccessful()))
-                .timeout(Duration.ofSeconds(8))
-                .onErrorReturn(false)
-                .block();
+	public Boolean apiFallBack(String json) {
+	    return fallbackClient.post()
+	            .bodyValue(json)
+	            .retrieve()
+	            .toBodilessEntity()
+	            .map(resp -> resp.getStatusCode().is2xxSuccessful())
+	            .timeout(Duration.ofSeconds(10))
+	            .onErrorReturn(false)
+	            .block();
         
     }
 
-    public Boolean callApiDefault(String json) {
-        return webClient.post()
-                .uri(urlProcessorDefault)
-                .bodyValue(json)
-                .exchangeToMono(response -> Mono.just(response.statusCode().is2xxSuccessful()))
-                .timeout(Duration.ofSeconds(8))
-                .onErrorReturn(false)
-                .block();
+    public Boolean apiDefault(String json) {
+    	  return defaultClient.post()
+    	            .bodyValue(json)
+    	            .retrieve()
+    	            .toBodilessEntity()
+    	            .map(resp -> resp.getStatusCode().is2xxSuccessful())
+    	            .timeout(Duration.ofSeconds(2))
+    	            .onErrorReturn(false)
+    	            .block();
     };
 
 
-    public String convertObjetoParaJson(PaymentProcessorRequest request) {
+    public String ReqToJsonString(PaymentProcessorRequest request) {
         return """
                 {
-                  "correlationId": "%s",
-                  "amount": %s
-                }
-                """.formatted(
-                escape(request.correlationId()),
-                request.amount().toPlainString()
+                "correlationId": "%s",
+                "amount": %s,
+                "requestedAt": "%s"
+        		}
+        		""".formatted(
+                escapeForJson(request.correlationId()),
+                request.amount().toPlainString(),
+                Instant.now().toString()
                 
         ).replace("\n", "").replace("  ", "");
     }
     
-    private String escape(String value) {
+    public String escapeForJson (String value) {
         return value.replace("\"", "\\\"");
     }
    

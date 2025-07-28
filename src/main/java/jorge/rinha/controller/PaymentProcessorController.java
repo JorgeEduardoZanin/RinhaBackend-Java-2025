@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jorge.rinha.dto.request.FullPaymentProcessorRequest;
 import jorge.rinha.dto.request.PaymentProcessorRequest;
 import jorge.rinha.service.PaymentProcessorService;
 
@@ -20,7 +21,7 @@ public class PaymentProcessorController {
 
 	@PostMapping
     public void payment(@RequestBody PaymentProcessorRequest paymentRequest) {
-        paymentService.processor(paymentRequest, paymentService.convertObjetoParaJson(paymentRequest));      
+        paymentService.getInQueue(new FullPaymentProcessorRequest(paymentRequest, paymentService.ReqToJsonString(paymentRequest)));      
 	}
 
 
