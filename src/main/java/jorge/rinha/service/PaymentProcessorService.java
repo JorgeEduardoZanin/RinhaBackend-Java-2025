@@ -48,7 +48,7 @@ public class PaymentProcessorService {
         this.webClientDefaultHealth  = webClientBuilder.baseUrl(urlDefaultHealth).build();
         this.webClientFallbackHealth = webClientBuilder.baseUrl(urlFallbackHealth).build();
         
-        for (int i = 0; i < 55; i++) {
+        for (int i = 0; i < 20; i++) {
 			Thread.startVirtualThread(this::queueManager);
 		}
     }
@@ -154,7 +154,7 @@ public class PaymentProcessorService {
     private void startHealthChecks() {
         Thread.startVirtualThread(() -> {
 
-            for (int iteration = 0; iteration < 12; iteration++) {
+            for (int i = 0; i < 12; i++) {
                 try {
                     HealthResponse defaultHealth = webClientDefaultHealth.get()
                         .retrieve()
@@ -171,7 +171,8 @@ public class PaymentProcessorService {
                         ? PaymentType.FALLBACK
                         : PaymentType.DEFAULT;
 
-                    Thread.sleep(5000);
+                    Thread.sleep(5000); 
+                         
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -180,6 +181,8 @@ public class PaymentProcessorService {
                 }
             }
             System.out.println("Health‑checks concluídos.");
+            paymentType = PaymentType.DEFAULT;
+            healthStarted.set(false);
         });
     }
    

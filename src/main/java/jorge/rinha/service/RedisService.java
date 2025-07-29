@@ -33,7 +33,7 @@ public class RedisService {
         this.redisTotalRequest = redisTotalRequest;
         this.redisTotalAmountCents = redisTotalAmountCents;
 
-        for (int i = 0; i < 25; i++) {
+        for (int i = 0; i < 20; i++) {
             Thread.startVirtualThread(this::queueManager);
         }
     }
