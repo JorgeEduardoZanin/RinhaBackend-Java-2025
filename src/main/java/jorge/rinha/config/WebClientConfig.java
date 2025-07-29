@@ -21,43 +21,37 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    /**
-     * Pool de conexões compartilhado por todos os WebClients.
-     */
+  
     @Bean
     public ConnectionProvider connectionProvider() {
         return ConnectionProvider.builder("rinha-pool")
-            .maxConnections(200)                      // conexões simultâneas
-            .pendingAcquireMaxCount(500)              // requisições em espera
+            .maxConnections(200)                     
+            .pendingAcquireMaxCount(500)             
             .pendingAcquireTimeout(Duration.ofSeconds(60))
             .maxIdleTime(Duration.ofSeconds(30))
             .maxLifeTime(Duration.ofMinutes(5))
             .build();
     }
 
-    /**
-     * HttpClient customizado para timeouts, compressão e HTTP/2.
-     */
+ 
     @Bean
     public HttpClient reactorHttpClient(ConnectionProvider provider) {
         return HttpClient.create(provider)
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)   // timeout TCP
-            .responseTimeout(Duration.ofSeconds(10))               // timeout de resposta
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)   
+            .responseTimeout(Duration.ofSeconds(10))              
             .doOnConnected(conn ->
                 conn.addHandlerLast(new ReadTimeoutHandler(10))
                     .addHandlerLast(new WriteTimeoutHandler(10)))
-            .protocol(HttpProtocol.H2, HttpProtocol.HTTP11)        // prioriza HTTP/2
-            .compress(true);                                       // gzip, deflate etc.
+            .protocol(HttpProtocol.H2, HttpProtocol.HTTP11)        
+            .compress(true);                                  
     }
 
-    /**
-     * Builder que reaproveita o mesmo ReactorHttpClient.
-     */
+
     @Bean
     public WebClient.Builder webClientBuilder(HttpClient reactorHttpClient) {
-        // reduz uso de memória para buffering de corpos grandes (opcional)
+
         ExchangeStrategies strategies = ExchangeStrategies.builder()
-            .codecs(config -> config.defaultCodecs().maxInMemorySize(2 * 1024 * 1024)) // 2 MiB
+            .codecs(config -> config.defaultCodecs().maxInMemorySize(2 * 1024 * 1024)) 
             .build();
 
         return WebClient.builder()
