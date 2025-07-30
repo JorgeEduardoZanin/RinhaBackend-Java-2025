@@ -10,7 +10,7 @@ import jorge.rinha.service.RedisService;
 
 
 @RestController
-@RequestMapping("/payments-summary")
+@RequestMapping("/")
 public class RedisController {
 
     private final RedisService redisService;;

@@ -33,18 +33,23 @@ public class PaymentProcessorService {
     private final WebClient webClientFallbackHealth;
 	
     private final RedisService redisService;
+    
+    private final MemoryDBService memoryDBService;
 
     public PaymentProcessorService(
             WebClient.Builder webClientBuilder,
             RedisService redisService,
+            MemoryDBService memoryDBService,
             @Value("${url.payment.processor.default}") String urlDefault,
             @Value("${url.payment.processor.fallback}") String urlFallback,
             @Value("${url.health.fallback}") String urlFallbackHealth,
-            @Value("${url.health.default}") String urlDefaultHealth) {
+            @Value("${url.health.default}") String urlDefaultHealth
+            ) {
 
         this.defaultClient  = webClientBuilder.baseUrl(urlDefault).build();
         this.fallbackClient = webClientBuilder.baseUrl(urlFallback).build();
         this.redisService   = redisService;
+        this.memoryDBService = memoryDBService;
         this.webClientDefaultHealth  = webClientBuilder.baseUrl(urlDefaultHealth).build();
         this.webClientFallbackHealth = webClientBuilder.baseUrl(urlFallbackHealth).build();
         
@@ -94,12 +99,14 @@ public class PaymentProcessorService {
 		if(paymentType == PaymentType.DEFAULT) {
 		for(int i = 0;i<3;i++) {
 			if(apiDefault(jsonPayment)) {
-				redisService.getInQueue(new PaymentCompleted(req.request().amount(), PaymentType.DEFAULT));
+				memoryDBService.saveDefault(req.request().amount());
+				//redisService.getInQueue(new PaymentCompleted(req.request().amount(), PaymentType.DEFAULT));
 				return true;
 			}
 		}}else {
 			if(apiFallBack(jsonPayment)) {
-				redisService.getInQueue(new PaymentCompleted(req.request().amount(), PaymentType.FALLBACK));
+				memoryDBService.saveFallback(req.request().amount());
+				//redisService.getInQueue(new PaymentCompleted(req.request().amount(), PaymentType.FALLBACK));
 				return true;
 			}
 		}
@@ -155,6 +162,9 @@ public class PaymentProcessorService {
         Thread.startVirtualThread(() -> {
 
             for (int i = 0; i < 12; i++) {
+            	if(i == 0) {
+            		memoryDBService.cleanMemory();
+            	}
                 try {
                     HealthResponse defaultHealth = webClientDefaultHealth.get()
                         .retrieve()
