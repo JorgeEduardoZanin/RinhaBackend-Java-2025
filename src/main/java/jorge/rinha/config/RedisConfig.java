@@ -70,17 +70,6 @@ public class RedisConfig {
         return factory;
     }
 
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(LettuceConnectionFactory cf) {
-        RedisTemplate<String, Object> tpl = new RedisTemplate<>();
-        tpl.setConnectionFactory(cf);
-        tpl.setKeySerializer(new StringRedisSerializer());
-        tpl.setValueSerializer(new GenericToStringSerializer<>(Object.class));
-        tpl.afterPropertiesSet();
-        return tpl;
-    }
-
     @Bean
     @Primary
     public RedisTemplate<String, Integer> redisTemplateInt(LettuceConnectionFactory cf) {

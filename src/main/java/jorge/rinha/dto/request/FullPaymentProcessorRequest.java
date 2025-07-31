@@ -1,5 +1,7 @@
 package jorge.rinha.dto.request;
 
-public record FullPaymentProcessorRequest(PaymentProcessorRequest request, String json) {
+import java.time.Instant;
+
+public record FullPaymentProcessorRequest(PaymentProcessorRequest request, String json, Instant now) {
 
 }

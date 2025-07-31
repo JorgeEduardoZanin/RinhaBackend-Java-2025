@@ -9,17 +9,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jorge.rinha.dto.response.PaymentSummaryResponse;
-import jorge.rinha.service.MemoryDBService;
+import jorge.rinha.repository.RedisRepository;
 
 @RestController
 @RequestMapping("/payments-summary")
-public class MemoryDBController {
+public class RedisService {
 
    
-    private final MemoryDBService summaryService;
+    private final RedisRepository redisService;
     
-        public MemoryDBController(MemoryDBService summaryService) {
-		this.summaryService = summaryService;
+        public RedisService(RedisRepository redisService) {
+		this.redisService = redisService;
 	}
 
 	@GetMapping
@@ -32,8 +32,12 @@ public class MemoryDBController {
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
         Instant to
     ) {
-        return summaryService.getSummary(from, to);
+        return redisService.findSummary(from, to);
     }
+	
+	
+	
+	
 }
 	
 	

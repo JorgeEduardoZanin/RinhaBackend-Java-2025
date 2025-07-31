@@ -4,6 +4,10 @@ x-service-templates:
     networks:
       - payment-processor
       - payment-processor-db
+    depends_on:
+      - payment-processor-default
+      - payment-processor-fallback
+ 
     deploy:
       restart_policy:
         condition: on-failure

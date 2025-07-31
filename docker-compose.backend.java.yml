@@ -16,7 +16,7 @@ services:
       resources:
         limits:
           cpus: "1.55"
-          memory: "250MB"
+          memory: "350MB"
 
   api2:
     build:
@@ -33,7 +33,7 @@ services:
       resources:
         limits:
           cpus: "1.55"
-          memory: "250MB"
+          memory: "350MB"
 
   nginx:
     image: nginx:latest
