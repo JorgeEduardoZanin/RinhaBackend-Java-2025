@@ -2,9 +2,7 @@ version: "3.8"
 
 services:
   api1:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: jorgedevsoftware/jorge-rinha:1.0
     container_name: api1
     environment:
       - "JAVA_OPTS=-Dserver.port=8081 -Xms54m -Xmx110m"
@@ -15,13 +13,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.55"
-          memory: "350MB"
+          cpus: "0.55"
+          memory: "90MB"
 
   api2:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: jorgedevsoftware/jorge-rinha:1.0
     container_name: api2
     environment:
       - "JAVA_OPTS=-Dserver.port=8082 -Xms54m -Xmx110m"
@@ -32,8 +28,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.55"
-          memory: "350MB"
+          cpus: "0.55"
+          memory: "90MB"
 
   nginx:
     image: nginx:latest
@@ -51,7 +47,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: "25MB"
+          memory: "15MB"
 
   redis:
     image: redis:8-alpine
@@ -64,7 +60,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: "25MB"
+          memory: "15MB"
 
 networks:
   payment-processor:

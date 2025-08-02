@@ -1,4 +1,4 @@
-# === Build stage com GraalVM ===
+
 FROM ghcr.io/graalvm/native-image-community:24 AS builder
 WORKDIR /workspace
 
@@ -9,11 +9,9 @@ RUN ./mvnw dependency:go-offline -B
 COPY src src
 RUN ./mvnw clean package -Pnative -DskipTests native:compile -B
 
-# === Runtime com Debian Slim + zlib ===
 FROM debian:bookworm-slim
 WORKDIR /app
 
-# Instala apenas zlib e certificados
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       ca-certificates \

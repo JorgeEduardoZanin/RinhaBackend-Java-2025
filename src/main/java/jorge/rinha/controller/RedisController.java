@@ -3,6 +3,7 @@ package jorge.rinha.controller;
 import java.time.Instant;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -13,30 +14,30 @@ import jorge.rinha.repository.RedisRepository;
 
 @RestController
 @RequestMapping("/payments-summary")
-public class RedisService {
+public class RedisController {
 
    
-    private final RedisRepository redisService;
+    private final RedisRepository redisRepository;
     
-        public RedisService(RedisRepository redisService) {
-		this.redisService = redisService;
+        public RedisController(RedisRepository redisService) {
+		this.redisRepository = redisService;
 	}
 
 	@GetMapping
-    public PaymentSummaryResponse getSummary(
-        @RequestParam(name = "from", required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-        Instant from,
+    public PaymentSummaryResponse getSummary(@RequestParam(name = "from", required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
 
         @RequestParam(name = "to", required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-        Instant to
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)Instant to
     ) {
-        return redisService.findSummary(from, to);
+        return redisRepository.findSummary(from, to);
     }
 	
 	
-	
+	 @DeleteMapping
+	    public void clearAll() {
+		 redisRepository.clearAll();
+	    }
 	
 }
 	

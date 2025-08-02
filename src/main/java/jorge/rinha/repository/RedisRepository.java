@@ -1,9 +1,9 @@
 package jorge.rinha.repository;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
+
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -22,7 +22,7 @@ public class RedisRepository {
     private static final String DEFAULT_KEY = "payments:default";
     private static final String FALLBACK_KEY = "payments:fallback";
     private final LinkedBlockingQueue<RedisRepositoryResponse> queue = new LinkedBlockingQueue<>();
-    
+
     public RedisRepository(RedisTemplate<String, String> redis) {
         this.redis = redis;
         for (int i = 0; i < 3; i++) {
@@ -53,11 +53,7 @@ public class RedisRepository {
         try {
             boolean success = queue.offer(request, 1, TimeUnit.SECONDS);
             if (!success) {
-                Thread.sleep(Duration.ofSeconds(2).toMillis());
-                success = queue.offer(request, 1, TimeUnit.SECONDS);
-                if (!success) {
-                    System.out.println("Fila cheia! Pagamento descartado ou redirecionado.");
-                }
+            	success = queue.offer(request, 1, TimeUnit.SECONDS);           
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -114,5 +110,11 @@ public class RedisRepository {
             .append(":")
             .append(isDefault)
             .toString();
+    }
+    
+    public void clearAll() {
+        redis.getConnectionFactory()
+             .getConnection()
+             .flushDb();
     }
 }

@@ -22,11 +22,5 @@ public class PaymentProcessorController {
     public void payment(@RequestBody PaymentProcessorRequest paymentRequest) {
         paymentService.getInQueue(paymentService.ReqToJsonString(paymentRequest));      
 	}
-	
-	//@GetMapping
-	//public ResponseEntity<HealthResponse> getType() {
-		//return ResponseEntity.ok(paymentService.teste());
-	//}
-
 
 }
