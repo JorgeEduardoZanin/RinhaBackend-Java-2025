@@ -23,7 +23,7 @@ public class PaymentProcessorService {
 
 	private volatile PaymentType paymentType = PaymentType.DEFAULT;
 
-	private final BlockingQueue<FullPaymentProcessorRequest> queue = new ArrayBlockingQueue<>(5000);
+	private final BlockingQueue<FullPaymentProcessorRequest> queue = new ArrayBlockingQueue<>(10000);
 
 	private final WebClient defaultClient;
 	private final WebClient fallbackClient;
@@ -45,7 +45,7 @@ public class PaymentProcessorService {
 		this.redis=redis;
 	
 
-		for (int i = 0; i < 25; i++) {
+		for (int i = 0; i < 7; i++) {
 			Thread.startVirtualThread(this::queueManager);
 		}
 	}
