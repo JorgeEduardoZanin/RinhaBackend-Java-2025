@@ -65,8 +65,8 @@ services:
     volumes:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "9999:80"    # rota tráfego do host:9999 para o HAProxy na porta 80
-      - "443:443"    # (opcional) se vier a usar SSL offload
+      - "9999:80"    
+      - "443:443"    
     depends_on:
       - api1
       - api2
@@ -77,6 +77,18 @@ services:
         limits:
           cpus:    "0.2"
           memory:  "25MB"
+
+  postgres:
+    container_name: postgresql
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=db_rinha
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - "5431:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data        
 
 networks:
   backend:

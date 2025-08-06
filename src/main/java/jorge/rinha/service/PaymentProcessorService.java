@@ -12,9 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import jorge.rinha.dto.request.FullPaymentProcessorRequest;
-import jorge.rinha.repository.RedisRepository;
 import jorge.rinha.dto.request.PaymentProcessorRequest;
-import jorge.rinha.dto.response.RedisRepositoryResponse;
+import jorge.rinha.dto.response.MemoryDatabaseResponse;
 import jorge.rinha.enums.PaymentType;
 
 
@@ -28,7 +27,9 @@ public class PaymentProcessorService {
 	private final WebClient defaultClient;
 	private final WebClient fallbackClient;
 	
-	private final RedisRepository redis;
+
+	
+	private final MemoryDBService memoryDbService;
 	
 	private final Duration  durationDefault = Duration.ofSeconds(12);
 	private final Duration  durationFallback = Duration.ofMillis(333);
@@ -36,17 +37,17 @@ public class PaymentProcessorService {
 	public PaymentProcessorService(WebClient.Builder webClientBuilder,
 			@Value("${url.payment.processor.default}") String urlDefault,
 			@Value("${url.payment.processor.fallback}") String urlFallback,
-			RedisRepository redis) {
+			MemoryDBService memoryDbService) {
 		
 			
 
 		this.defaultClient = webClientBuilder.baseUrl(urlDefault).build();
 		this.fallbackClient = webClientBuilder.baseUrl(urlFallback).build();
-		this.redis=redis;
+		this.memoryDbService = memoryDbService;
 		
 		Thread.startVirtualThread(this::checkHealth);
 		
-		for (int i = 0; i < 7; i++) {
+		for (int i = 0; i < 16; i++) {
 			Thread.startVirtualThread(this::queueManager);
 		}
 	}
@@ -85,13 +86,23 @@ public class PaymentProcessorService {
 
 		if (paymentType == PaymentType.DEFAULT) {
 				if (apiDefault(req.json())) {
-					redis.getInQueue(new RedisRepositoryResponse(req, PaymentType.DEFAULT));
+					try {
+						memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.DEFAULT));
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					return;
 				}
 			}
 		
 			if (apiFallBack(req.json())) {
-				redis.getInQueue(new RedisRepositoryResponse(req, PaymentType.FALLBACK));
+				try {
+					memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.FALLBACK));
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				return;
 			}
 		
