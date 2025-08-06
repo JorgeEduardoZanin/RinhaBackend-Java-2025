@@ -31,7 +31,7 @@ public class PaymentProcessorService {
 	private final RedisRepository redis;
 	
 	private final Duration  durationDefault = Duration.ofSeconds(12);
-	private final Duration  durationFallback = Duration.ofMillis(200);
+	private final Duration  durationFallback = Duration.ofMillis(333);
 
 	public PaymentProcessorService(WebClient.Builder webClientBuilder,
 			@Value("${url.payment.processor.default}") String urlDefault,
@@ -43,8 +43,9 @@ public class PaymentProcessorService {
 		this.defaultClient = webClientBuilder.baseUrl(urlDefault).build();
 		this.fallbackClient = webClientBuilder.baseUrl(urlFallback).build();
 		this.redis=redis;
-	
-
+		
+		Thread.startVirtualThread(this::checkHealth);
+		
 		for (int i = 0; i < 7; i++) {
 			Thread.startVirtualThread(this::queueManager);
 		}
@@ -98,8 +99,6 @@ public class PaymentProcessorService {
 
 	public Boolean apiFallBack(String json) {
 
-	    long start = System.nanoTime();                                   
-
 	    Boolean success = fallbackClient
 	        .post()
 	        .bodyValue(json)
@@ -110,19 +109,10 @@ public class PaymentProcessorService {
 	        .onErrorReturn(false)
 	        .block();                                                    
 
-	    long elapsedMs = (System.nanoTime() - start) / 1_000_000;         
-
-	    if(elapsedMs > 100L){
-	    	paymentType = PaymentType.DEFAULT;
-	    }
-	    
 	    return success;
-
 	}
 
-	public Boolean apiDefault(String json) {
-
-		long start = System.nanoTime();    
+	public Boolean apiDefault(String json) {    
 		
 		Boolean success = defaultClient.post()
 				.bodyValue(json)
@@ -131,14 +121,8 @@ public class PaymentProcessorService {
 				.map(resp -> resp.getStatusCode().is2xxSuccessful())
 				.timeout(durationDefault)
 				.onErrorReturn(false).block();
-		
-		long elapsedMs = (System.nanoTime() - start) / 1_000_000;       
-
-	    if(elapsedMs < 100L) {
-	    	paymentType = PaymentType.DEFAULT;
-	    }
-	    return success;
-
+		     
+  	    return success;
 	};
 
 	public FullPaymentProcessorRequest ReqToJsonString(PaymentProcessorRequest request) {
@@ -161,4 +145,63 @@ public class PaymentProcessorService {
 		return value.replace("\"", "\\\"");
 	}
 
+	public void checkHealth() {
+		
+		while(true) {
+		
+	    String json = """
+	        {
+	          "correlationId": "invalid",
+	          "amount": invalid,
+	          "requestedAt": "3000-01-01T00:00:00Z"
+	        }
+	        """
+	        .formatted()
+	        .replace("\n", "")
+	        .replace("  ", "");
+    	
+		long startFallback = System.nanoTime(); 
+		
+		var fallbackOk = fallbackClient
+			        .post()
+			        .bodyValue(json)
+			        .retrieve()
+			        .toBodilessEntity()
+			        .map(resp -> resp.getStatusCode().is2xxSuccessful())
+			        .timeout(durationFallback)
+		            .onErrorReturn(false)    
+			        .block(); 
+		 
+		 long elapsedMsFallback = (System.nanoTime() - startFallback) / 1_000_000;  
+		 
+		 long startDefault = System.nanoTime(); 
+		 
+		 var defaultOk = defaultClient.post()
+					.bodyValue(json)
+					.retrieve()
+					.toBodilessEntity()
+					.map(resp -> resp.getStatusCode().is2xxSuccessful())
+					.timeout(durationDefault)
+		            .onErrorReturn(false)    
+					.block();
+		
+		long elapsedMsDefault = (System.nanoTime() - startDefault) / 1_000_000;  
+		
+		if (elapsedMsDefault > 100 && elapsedMsDefault < 400L) {
+		    paymentType = PaymentType.FALLBACK;
+		}else {
+			paymentType = PaymentType.DEFAULT;
+		}
+		
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		}
+			
+		} 
+		
+    }
+	
 }

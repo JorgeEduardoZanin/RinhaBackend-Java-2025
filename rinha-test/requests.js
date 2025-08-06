@@ -4,8 +4,9 @@ import exec from 'k6/execution';
 const initialToken = '123';
 export const token = __ENV.TOKEN ?? initialToken;
 
+// Ajuste das URLs para serem resolvidas dentro da rede Docker
 const paymentProcessorDefaultHttp = new Httpx({
-    baseURL: 'http://localhost:8001',
+    baseURL: 'http://payment-processor-default:8080',
     headers: {
         'Content-Type': 'application/json',
         'X-Rinha-Token': token
@@ -13,8 +14,8 @@ const paymentProcessorDefaultHttp = new Httpx({
     timeout: 1500,
 });
 
-const paymentProcessorFallbacktHttp = new Httpx({
-    baseURL: 'http://localhost:8002',
+const paymentProcessorFallbackHttp = new Httpx({
+    baseURL: 'http://payment-processor-fallback:8080',
     headers: {
         'Content-Type': 'application/json',
         'X-Rinha-Token': token
@@ -23,17 +24,16 @@ const paymentProcessorFallbacktHttp = new Httpx({
 });
 
 const backendHttp = new Httpx({
-    baseURL: "http://localhost:9999",
-    //baseURL: "http://localhost:5123",
+    baseURL: 'http://nginx:9999',
     headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
     },
     timeout: 1500,
 });
 
 const paymentProcessorHttp = {
-    "default": paymentProcessorDefaultHttp,
-    "fallback": paymentProcessorFallbacktHttp,
+    default: paymentProcessorDefaultHttp,
+    fallback: paymentProcessorFallbackHttp,
 };
 
 export async function setPPToken(service, token) {
