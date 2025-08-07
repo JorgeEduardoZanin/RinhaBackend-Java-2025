@@ -17,7 +17,7 @@ import jorge.rinha.service.MemoryDBService;
 @RequestMapping("/payments-summary")
 public class MemoryDBController {
 	
-	@Value("${url.instance}")
+	@Value("${URL_INSTANCE}")
 	private String value222;
 
     private final MemoryDBService memoryDbService;
@@ -44,15 +44,15 @@ public class MemoryDBController {
         @RequestParam(required = false) Instant from,
         @RequestParam(required = false) Instant to
     ) {
-		System.out.println("VIADODADOR DE CUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+		
         return memoryDbService.findInternal(from, to);
     }
 	
 	
 	 @DeleteMapping
-	    public void clearAll() {
-		
-	    }
+	 public void clearAll() {
+		 memoryDbService.cleanMemory();
+	 }
 	
 }
 	

@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,8 @@ import jorge.rinha.enums.PaymentType;
 @Service
 public class PaymentProcessorService {
 
-	private volatile PaymentType paymentType = PaymentType.DEFAULT;
+	private final AtomicReference<PaymentType> paymentType = new AtomicReference<>(PaymentType.DEFAULT);
+
 
 	private final BlockingQueue<FullPaymentProcessorRequest> queue = new ArrayBlockingQueue<>(10000);
 
@@ -47,7 +48,7 @@ public class PaymentProcessorService {
 		
 		Thread.startVirtualThread(this::checkHealth);
 		
-		for (int i = 0; i < 16; i++) {
+		for (int i = 0; i < 13; i++) {
 			Thread.startVirtualThread(this::queueManager);
 		}
 	}
@@ -73,10 +74,8 @@ public class PaymentProcessorService {
 	public void getInQueue(FullPaymentProcessorRequest request) {
 		try {
 
-			boolean success = queue.offer(request, 1, TimeUnit.SECONDS);
-			if (!success) {	
-				queue.offer(request, 1, TimeUnit.SECONDS);
-				}
+			queue.offer(request, 1, TimeUnit.SECONDS);
+			
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -84,26 +83,16 @@ public class PaymentProcessorService {
 
 	public void processor(FullPaymentProcessorRequest req) {
 
-		if (paymentType == PaymentType.DEFAULT) {
+		if (paymentType.get() == PaymentType.DEFAULT) {
 				if (apiDefault(req.json())) {
-					try {
-						memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.DEFAULT));
-					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.DEFAULT));
 					return;
 				}
 			}
 		
 			if (apiFallBack(req.json())) {
-				try {
 					memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.FALLBACK));
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				return;
+					return;
 			}
 		
 	}
@@ -199,9 +188,9 @@ public class PaymentProcessorService {
 		long elapsedMsDefault = (System.nanoTime() - startDefault) / 1_000_000;  
 		
 		if (elapsedMsDefault > 100 && elapsedMsDefault < 400L) {
-		    paymentType = PaymentType.FALLBACK;
+			paymentType.set(PaymentType.FALLBACK);
 		}else {
-			paymentType = PaymentType.DEFAULT;
+			paymentType.set(PaymentType.DEFAULT);
 		}
 		
 		try {

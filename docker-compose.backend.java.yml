@@ -6,6 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: api1
+    environment:
+     - URL_INSTANCE=http://api2:8080/payments-summary/internal
     ports:
       - "8081:8080"
     networks:
@@ -22,6 +24,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: api2
+    environment:
+     - URL_INSTANCE=http://api1:8080/payments-summary/internal
     ports:
       - "8082:8080"
     networks:
@@ -33,40 +37,14 @@ services:
           cpus: "0.65"
           memory: "100MB"
 
-
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - backend
-    sysctls:
-      net.core.somaxconn: 1024
-    ulimits:
-      nofile:
-        soft: 1024
-        hard: 2048
-    healthcheck:
-      test: ["CMD", "redis-cli", "PING"]
-      interval: 5s
-      timeout: 2s
-      retries: 3
-      start_period: 5s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.2"
-          memory: "30MB"
  
   haproxy:
-    image: haproxy:2.8
+    image: haproxy:latest
     container_name: haproxy
     volumes:
-      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "9999:80"    
-      - "443:443"    
+      - "9999:80"       
     depends_on:
       - api1
       - api2
@@ -75,20 +53,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus:    "0.2"
+          cpus:    "0.25"
           memory:  "25MB"
-
-  postgres:
-    container_name: postgresql
-    image: postgres:latest
-    environment:
-      - POSTGRES_DB=db_rinha
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=admin
-    ports:
-      - "5431:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data        
 
 networks:
   backend:

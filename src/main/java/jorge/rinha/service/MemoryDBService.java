@@ -1,4 +1,3 @@
-// src/main/java/jorge/rinha/service/PaymentSummaryService.java
 package jorge.rinha.service;
 
 import java.math.BigDecimal;
@@ -27,7 +26,7 @@ public class MemoryDBService {
     private final WebClient otherInstance;
 
     public MemoryDBService(WebClient.Builder webClientBuilder,
-                                 @Value("${url.instance}") String urlOtherInstance) {
+                                 @Value("${URL_INSTANCE}") String urlOtherInstance) {
         this.otherInstance = webClientBuilder
             .baseUrl(urlOtherInstance)
             .build();
@@ -42,13 +41,13 @@ public class MemoryDBService {
     }
 
     public PaymentSummaryResponse findSummary(Instant from, Instant to) {
-        // 1) snapshot para evitar race conditions
+      
         List<MemoryDatabaseResponse> snapshot = new ArrayList<>(store);
 
-        // 2) cálculo local
+      
         PaymentSummaryResponse local = calculateLocal(snapshot, from, to);
 
-        // 3) busca remota com timeout + fallback
+
         Mono<PaymentSummaryResponse> remoteMono = otherInstance.get()
             .uri(uri -> uri
                 .queryParam("from", from == null ? null : from.toString())
@@ -61,11 +60,11 @@ public class MemoryDBService {
             .timeout(Duration.ofMillis(100))
             .onErrorResume(e -> Mono.just(emptySummary()));
 
-        // 4) combinar e bloquear em boundedElastic
+
         return remoteMono
             .map(remote -> merge(local, remote))
             .publishOn(Schedulers.boundedElastic())
-            .block();  // aqui você obtém a resposta síncrona
+            .block(); 
     }
 
     private PaymentSummaryResponse calculateLocal(

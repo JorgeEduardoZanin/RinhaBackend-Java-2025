@@ -2,6 +2,11 @@ package jorge.rinha.dto.request;
 
 import java.math.BigDecimal;
 
-public record PaymentProcessorRequest(String correlationId, BigDecimal amount, String Json) {
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+
+public record PaymentProcessorRequest(
+		@JsonProperty("correlationId") String correlationId, @JsonProperty("amount")  BigDecimal amount) {
 
 }
