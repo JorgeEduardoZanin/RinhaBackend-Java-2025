@@ -46,9 +46,9 @@ public class PaymentProcessorService {
 		this.fallbackClient = webClientBuilder.baseUrl(urlFallback).build();
 		this.memoryDbService = memoryDbService;
 		
-		Thread.startVirtualThread(this::checkHealth);
+		//Thread.startVirtualThread(this::checkHealth);
 		
-		for (int i = 0; i < 13; i++) {
+		for (int i = 0; i < 15; i++) {
 			Thread.startVirtualThread(this::queueManager);
 		}
 	}
