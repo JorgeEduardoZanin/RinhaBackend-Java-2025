@@ -40,13 +40,15 @@ public class MemoryDBService {
         store.clear();
     }
 
+    //cria um snapshot para diminuir as chances de inconsistencias, 
+    //tenho os exatos valores do momento que a requisicao foi feita dentro do snapshot
+    //faz uma chamada mono para a outra instancia usando o metodo findInternal(da outra instancia)
+    //no fim da merge entre as duas instancias retornando os valores totais das duas sem inconsistencias
     public PaymentSummaryResponse findSummary(Instant from, Instant to) {
       
         List<MemoryDatabaseResponse> snapshot = new ArrayList<>(store);
-
       
         PaymentSummaryResponse local = calculateLocal(snapshot, from, to);
-
 
         Mono<PaymentSummaryResponse> remoteMono = otherInstance.get()
             .uri(uri -> uri
@@ -67,6 +69,7 @@ public class MemoryDBService {
             .block(); 
     }
 
+    //calcula o total local usando datas, varre todo o snapshot 
     private PaymentSummaryResponse calculateLocal(
             List<MemoryDatabaseResponse> snapshot,
             Instant from, Instant to) {
@@ -97,6 +100,8 @@ public class MemoryDBService {
         );
     }
 
+    
+    //soma as duas instancias
     private PaymentSummaryResponse merge(
             PaymentSummaryResponse a,
             PaymentSummaryResponse b) {
@@ -117,6 +122,8 @@ public class MemoryDBService {
         );
     }
 
+    
+    //fallback de erro, retorna 0 quando tem erro
     private PaymentSummaryResponse emptySummary() {
         return new PaymentSummaryResponse(
             new PaymentResponse(BigDecimal.ZERO, 0),
@@ -124,6 +131,9 @@ public class MemoryDBService {
         );
     }
     
+    
+    //calculo local para retornar apenas o valor da instancia atual
+    //para a outra instancia somar com ela
     public PaymentSummaryResponse calculateLocalOnly(Instant from, Instant to) {
         List<MemoryDatabaseResponse> snapshot = new ArrayList<>(store);
         return calculateLocal(snapshot, from, to);

@@ -13,21 +13,21 @@ import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
 @Configuration
-public class WebFluxConfig implements WebFluxConfigurer {
+public class ObjectMapperConfig implements WebFluxConfigurer {
 
     @Bean
     public ObjectMapper objectMapper() {
         var mapper = new ObjectMapper();
-        // módulo para suportar JavaTime (Instant, etc)
+  
         mapper.registerModule(new JavaTimeModule());
-        // Afterburner para acelerar serialização
+
         mapper.registerModule(new AfterburnerModule());
         return mapper;
     }
 
     @Bean
     public Jackson2JsonDecoder jackson2JsonDecoder(ObjectMapper mapper) {
-        // passa o ObjectMapper + só JSON
+
         return new Jackson2JsonDecoder(mapper, MimeTypeUtils.APPLICATION_JSON);
     }
 
@@ -38,7 +38,7 @@ public class WebFluxConfig implements WebFluxConfigurer {
 
     @Override
     public void configureHttpMessageCodecs(ServerCodecConfigurer configurer) {
-        // sobrescreve os codecs padrão de JSON
+
         configurer.defaultCodecs().jackson2JsonDecoder(jackson2JsonDecoder(objectMapper()));
         configurer.defaultCodecs().jackson2JsonEncoder(jackson2JsonEncoder(objectMapper()));
     }

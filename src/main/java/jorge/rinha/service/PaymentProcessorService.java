@@ -32,8 +32,8 @@ public class PaymentProcessorService {
 	
 	private final MemoryDBService memoryDbService;
 	
-	private final Duration  durationDefault = Duration.ofSeconds(12);
-	private final Duration  durationFallback = Duration.ofMillis(333);
+	private final Duration  durationDefault = Duration.ofSeconds(2);
+	private final Duration  durationFallback = Duration.ofMillis(100);
 
 	public PaymentProcessorService(WebClient.Builder webClientBuilder,
 			@Value("${url.payment.processor.default}") String urlDefault,
@@ -52,6 +52,8 @@ public class PaymentProcessorService {
 			Thread.startVirtualThread(this::queueManager);
 		}
 	}
+	
+
 
 	public void queueManager() {
 		while (true) {
@@ -83,17 +85,21 @@ public class PaymentProcessorService {
 
 	public void processor(FullPaymentProcessorRequest req) {
 
-		if (paymentType.get() == PaymentType.DEFAULT) {
+		//if (paymentType.get() == PaymentType.DEFAULT) {
+		for(int i = 0; i<15;i++) {
 				if (apiDefault(req.json())) {
 					memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.DEFAULT));
 					return;
 				}
-			}
+		}
+			//}
 		
-			if (apiFallBack(req.json())) {
+			if(apiFallBack(req.json())) {
 					memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.FALLBACK));
 					return;
 			}
+			
+			getInQueue(req);
 		
 	}
 
