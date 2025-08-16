@@ -25,11 +25,8 @@ public class MemoryDBService {
     private final Deque<MemoryDatabaseResponse> store = new ConcurrentLinkedDeque<>();
     private final WebClient otherInstance;
 
-    public MemoryDBService(WebClient.Builder webClientBuilder,
-                                 @Value("${URL_INSTANCE}") String urlOtherInstance) {
-        this.otherInstance = webClientBuilder
-            .baseUrl(urlOtherInstance)
-            .build();
+    public MemoryDBService(WebClient.Builder webClientBuilder, @Value("${URL_INSTANCE}") String urlOtherInstance) {
+        this.otherInstance = webClientBuilder.baseUrl(urlOtherInstance).build();
     }
 
     public void save(MemoryDatabaseResponse response) {
@@ -81,10 +78,10 @@ public class MemoryDBService {
         int cntDef = 0, cntFb = 0;
 
         for (var rec : snapshot) {
-            Instant ts = rec.req().now();
+            Instant ts = rec.now();
             if (ts.isBefore(effFrom) || ts.isAfter(effTo)) continue;
 
-            BigDecimal amt = rec.req().request().amount();
+            BigDecimal amt = rec.amount();
             if (rec.paymentType() == PaymentType.DEFAULT) {
                 sumDef = sumDef.add(amt);
                 cntDef++;

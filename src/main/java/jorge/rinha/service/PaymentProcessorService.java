@@ -1,5 +1,6 @@
 package jorge.rinha.service;
 
+import java.io.ByteArrayOutputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -10,6 +11,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 
 import jorge.rinha.dto.request.FullPaymentProcessorRequest;
 import jorge.rinha.dto.request.PaymentProcessorRequest;
@@ -22,7 +26,7 @@ public class PaymentProcessorService {
 
 	private final AtomicReference<PaymentType> paymentType = new AtomicReference<>(PaymentType.DEFAULT);
 
-
+	 private final JsonFactory jf = new JsonFactory();
 	private final BlockingQueue<FullPaymentProcessorRequest> queue = new ArrayBlockingQueue<>(10000);
 
 	private final WebClient defaultClient;
@@ -74,28 +78,24 @@ public class PaymentProcessorService {
 	}
 
 	public void getInQueue(FullPaymentProcessorRequest request) {
-		try {
-
-			queue.offer(request, 1, TimeUnit.SECONDS);
-			
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		
+		queue.offer(request);
+					
 	}
 
 	public void processor(FullPaymentProcessorRequest req) {
 
 		//if (paymentType.get() == PaymentType.DEFAULT) {
-		for(int i = 0; i<15;i++) {
+		for(int i = 0; i<5;i++) {
 				if (apiDefault(req.json())) {
-					memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.DEFAULT));
+					memoryDbService.save(new MemoryDatabaseResponse(req.now(), req.amount(), PaymentType.DEFAULT));
 					return;
 				}
 		}
 			//}
 		
 			if(apiFallBack(req.json())) {
-					memoryDbService.save(new MemoryDatabaseResponse(req, PaymentType.FALLBACK));
+					memoryDbService.save(new MemoryDatabaseResponse(req.now(), req.amount(), PaymentType.FALLBACK));
 					return;
 			}
 			
@@ -103,7 +103,7 @@ public class PaymentProcessorService {
 		
 	}
 
-	public Boolean apiFallBack(String json) {
+	public Boolean apiFallBack(byte[] json) {
 
 	    Boolean success = fallbackClient
 	        .post()
@@ -118,7 +118,7 @@ public class PaymentProcessorService {
 	    return success;
 	}
 
-	public Boolean apiDefault(String json) {    
+	public Boolean apiDefault(byte[] json) {    
 		
 		Boolean success = defaultClient.post()
 				.bodyValue(json)
@@ -131,25 +131,29 @@ public class PaymentProcessorService {
   	    return success;
 	};
 
-	public FullPaymentProcessorRequest ReqToJsonString(PaymentProcessorRequest request) {
+
+	
+	public FullPaymentProcessorRequest toFullRequest(PaymentProcessorRequest request) {
 		Instant now = Instant.now();
-		String json = """
-				      {
-				      "correlationId": "%s",
-				      "amount": %s,
-				      "requestedAt": "%s"
-				}
-				""".formatted(escapeForJson(request.correlationId()), request.amount().toPlainString(),
-				now.toString()
+	    try (ByteArrayOutputStream out = new ByteArrayOutputStream(128);
+	         JsonGenerator gen = jf.createGenerator(out)) {
 
-		).replace("\n", "").replace("  ", "");
-		
-		return new FullPaymentProcessorRequest(request, json, now);
-	}
+	        gen.writeStartObject();
+	        gen.writeStringField("correlationId", request.correlationId());
 
-	public String escapeForJson(String value) {
-		return value.replace("\"", "\\\"");
-	}
+	        gen.writeNumberField("amount", request.amount());
+	        gen.writeStringField("requestedAt", now.toString());
+	        gen.writeEndObject();
+	        gen.flush();
+
+	        byte[] jsonBytes = out.toByteArray();
+	        return new FullPaymentProcessorRequest(jsonBytes, now,request.correlationId(), request.amount());
+	    }catch (Exception e) {
+			System.out.println(e);
+		}
+	    	return null;
+	}	
+
 
 	public void checkHealth() {
 		

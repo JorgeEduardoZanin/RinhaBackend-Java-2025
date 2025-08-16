@@ -26,7 +26,7 @@ public class PaymentProcessorController {
 	@ResponseStatus(value = HttpStatus.ACCEPTED)
 	public Mono<Void> payment(@RequestBody Mono<PaymentProcessorRequest> reqMono) {
 		try {
-			return reqMono.doOnNext(req -> paymentService.getInQueue(paymentService.ReqToJsonString(req))).then(); 	
+			return reqMono.doOnNext(req -> paymentService.getInQueue(paymentService.toFullRequest(req))).then(); 	
 		} catch (Exception e) {
 			System.out.println(e);
 		}
